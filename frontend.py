@@ -62,5 +62,5 @@ else:
 
     # Display additional information
     st.write("""
-        **Note:** The Water Index is a measure used to assess water availability and stress. Higher values indicate better water availability.
+        **Note:** The Water Index is a measure used to assess water availability and stress. Higher values indicate poor water availability.
     """)

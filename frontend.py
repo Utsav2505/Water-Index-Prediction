@@ -1,27 +1,29 @@
 import streamlit as st
 import joblib
-import numpy as np
+import pandas as pd
 
-MODEL_PATH = 'F:/Water-Index-Prediction-main/Models/XGBoost_Model.pkl'
-SCALER_PATH = 'F:/Water-Index-Prediction-main/Models/min_max_scaler.pkl'
-MAPPING_DICT_PATH = 'F:/Water-Index-Prediction-main/Models/mapping_dict.pkl'
+# Updated paths for the new model, scaler, and encoder
+MODEL_PATH = 'F:/Water-Index-Prediction-main/Models/RandomForest (1).joblib'
+SCALER_PATH = 'F:/Water-Index-Prediction-main/Models/scaler.joblib'
+ENCODER_PATH = 'F:/Water-Index-Prediction-main/Models/label_encoder.joblib'
 
-xgb_reg = joblib.load(MODEL_PATH)
+# Load the model, scaler, and encoder
+rf_reg = joblib.load(MODEL_PATH)
 scaler = joblib.load(SCALER_PATH)
-mapping_dict = joblib.load(MAPPING_DICT_PATH)
+label_encoder = joblib.load(ENCODER_PATH)
 
 st.title('Water Index Prediction')
 
 st.write("""
-    **Please enter the details of the state below to get the predicted Water Index.** 
-    The features include state area, population, total water storage, groundwater level, total water demand, and rainfall.
+    **Please enter the details below to get the predicted Water Index.** 
+    The features include state, year, state population, and total water demand.
 """)
 
 st.sidebar.header('About the Project')
 st.sidebar.write("""
     This project uses a machine learning model to predict the Water Index for different states based on various features.
-    The features include state area, population, total water storage, groundwater level, total water demand, and rainfall.
-    The model used is an XGBoost regressor, which is trained to provide accurate predictions for water management and planning.
+    The features include state, year, state population, and total water demand.
+    The model used is a Random Forest regressor, which is trained to provide accurate predictions for water management and planning.
 """)
 
 st.sidebar.subheader('Water Stress Legend')
@@ -31,31 +33,26 @@ st.sidebar.write("""
     - **6+:** High water stress
 """)
 
-state = st.selectbox('State', list(mapping_dict.keys()))
-state_area = st.number_input('State area (Km²)', min_value=0.0, step=0.1)
+state = st.selectbox('State', list(label_encoder.classes_))
 year = st.number_input('Year', min_value=1900, max_value=2100, step=1)
-population = st.number_input('State Population', min_value=0, step=1)
-water_storage = st.number_input('Total Water Storage in Reservoirs (mcm)', min_value=0.0, step=0.1)
-groundwater_level = st.number_input('Groundwater Level (mbgl)', min_value=0.0, step=0.1)
+state_population = st.number_input('State Population', min_value=0, step=1)
 water_demand = st.number_input('Total Water Demand (BCM)', min_value=0.0, step=0.1)
-rain_water = st.number_input('Rain Water (mm)', min_value=0.0, step=0.1)
 
-data_to_predict = [[
-    mapping_dict[state],
-    state_area,
+# Encode state and prepare data for prediction
+state_encoded = label_encoder.transform([state])[0]
+data_to_predict = pd.DataFrame([[
+    state_encoded,
     year,
-    population,
-    water_storage,
-    groundwater_level,
-    water_demand,
-    rain_water
-]]
+    state_population,
+    water_demand
+]], columns=['State Name', 'Year', 'State Population', 'Total Water Demand(BCM)'])
 
-if len(data_to_predict[0]) != scaler.n_features_in_:
-    st.error(f"Error: Expected {scaler.n_features_in_} features, but got {len(data_to_predict[0])}.")
+# Check if the number of features matches
+if data_to_predict.shape[1] != scaler.n_features_in_:
+    st.error(f"Error: Expected {scaler.n_features_in_} features, but got {data_to_predict.shape[1]}.")
 else:
     scaled_data = scaler.transform(data_to_predict)
-    prediction = xgb_reg.predict(scaled_data)
+    prediction = rf_reg.predict(scaled_data)
     
     st.subheader('Prediction Result')
     st.write(f'**Predicted Water Index for {state}:**')
